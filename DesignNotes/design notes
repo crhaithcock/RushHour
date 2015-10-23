@@ -1,0 +1,41 @@
+
+
+
+compute nodes
+compute edges
+compute solution paths
+
+write output (sql, etc.)
+
+How to interrogate the graph?
+Craft SQL in the UI and send them to the db?
+Create sprocs as the middle layer and then craft simple SQL querries from the UI?
+Use an MVC pattern?
+Simplest solution is to probably to use sprocs and simple SQL from the UI.
+
+- Questions to ask of the graph:
+
+- Have we completed computing the solution graph with all the meta data?
+- Give me a list of all connected components that haven't been solved for solution paths
+- For each set/list expressed in this section of these notes, provide a count for the size of the set/list
+- give me a list of all combinatorial classes that have been solved;
+- give me a list of all combinatorial classes and status (node complete, edge complete, connected component complete, solution path complete)
+- give me a list of all combinatorial classes filtered on status
+- provide aggregate counts:
+- 	num nodes for each combinatorial class
+- 	
+
+2012-10-01
+
+Need to compute the frontier set and build the solution paths. considering a pure sql implementation. 
+But I only need to build the paths once.
+Build the per iteration update into SQL. Drive the recursion with python.
+
+
+
+
+
+
+
+
+

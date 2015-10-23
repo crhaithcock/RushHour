@@ -1,0 +1,53 @@
+
+TO DO / Wish List
+
+- rework labeling algorithm for navigate comb class to color by end_a position. This will create a consistent color/label when navigating
+
+- 
+
+
+building the data
+
+	- nodes - python
+	- edges - sql? python?
+	- connected components -python (breadth first search and store all edges back into the tree along with new branches)
+	- game paths - python (breadth first search starting with all final states within a single connected component)
+
+
+
+
+
+
+nodes
+- use python generator to walk though the combinations
+- store in sql db
+
+- reporting / navigating
+- drop down all comb classes. Display first state computed for the given class
+	- allow user interaction to move the cars and jump to a different part of the graph
+
+
+edges 
+- use sql to winnow the input set
+- use python for breadth first search (efficiency may demand moving this to sql)
+	- track all edges back and u 
+
+
+connected components
+- use python
+
+
+edges and connected components in one pass
+- repeat until all nodes have been analyzed
+	- use sql to winnow input to smaller container of connected components
+	- use python for breadth first search
+		- walk the tree
+		- map every edge of each new node
+			- take note to avoid duplicating a previously discovered edge (want to maintain undirected graph)
+		
+game paths
+- use sql to repeatedly select the next layer of white nodes (start with final states)
+- maybe use all sql for this layer
+
+
+

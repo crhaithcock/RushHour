@@ -1,0 +1,40 @@
+
+
+Rush Hour Puzzle State Hash Notes
+
+
+Part of the puzzle state data is the placement of the pieces on the RH board.
+
+The purpose of the hash is to provide a piece of data for quickly detecting if two board configurations are identical.
+
+There is an additional potential to use the hashes to determine if two puzzle states are neighbors in the state graph.
+
+This document tracks the current state of the definition of this hash function.
+
+
+version 1
+
+Input: pieces arranged on the RH board
+
+Output: 72 character string.
+
+There are 2 characters for each square on the board.
+The board positions are numbered from the top left to the bottom right as 1 through 36.
+
+These are the possible values for a 2-char board space encoding:
+
+'00' -- empty space
+'2v' -- space occupied by a car with vertical orientation
+'2h' -- space occupied by a car with horizontal orientation
+'3v' -- space occupied by a truck with vertical orientation
+'3h' -- space occupied by a truck with a horizontal orientation
+
+Without proof, I offer that there is a one-to-one correspondence between board configurations and these 72-character strings.
+
+
+Well, shoot. There is a problem in the claim above. Since the red car is distinguished, there are duplicate encodings due to one car
+specially marked as the 'red car'. including the red car location with the above encoding appears to uniquely idenfify a board configuration.
+
+
+
+

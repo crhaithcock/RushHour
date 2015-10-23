@@ -1,0 +1,55 @@
+
+
+Rush Hour Component Topology Hash Notes
+
+
+An invariant across all puzzle states within a connected component of the state graph is the number of pieces, their sizes,
+row placement, column placement and orientations.
+
+
+The purpose of the hash is to provide a piece of data for quickly winnowing out many puzzle states that are guaranteed to not
+match any of the puzzle states within a given component. In this way, this hash works like so many tolopological invariants that are used to prove two topological objects are not isomorphic.
+
+
+This document tracks the current state of the definition of this hash function.
+
+
+version 1
+
+Input: pieces arranged on the RH board
+
+Output: 48 character string.
+
+There are four characters for each row on the board and there are four characters for each column of the board.
+
+The four charcater encoding scheme:
+
+'2x3y' where x is the number of cars in the row (column) and y is the number of trucks in the row (column).
+
+We count rows from top to bottom starting with 1 and count columns from left to right starting with 1.
+
+The first four characters of the hash cover row 1, the second four characters cover row 2, the seventh block of four characters
+covers column 1 and the 12 block of 4 characters covers column 6.
+
+
+BITMAP concept
+a given row or column can be in one of 7 states:
+
+*empty
+*1 car
+*2 cars
+*3 cars
+*1 truck
+*2 trucks
+*1 car and 1 truck
+
+Thus, 3 bits are required for each row/col. We replace each 4-chars with 3 bits. The layout scheme stays the same.
+
+
+
+Without proof, I offer that this is a well defined function. That is, any two connected puzzle states in the RH state graph
+will produce the same Component Hash output. Furthermore, it is easy to see that this function is not one-to-one. Different 
+puzzle states that are not connected may produce the same Component Hash.
+
+
+
