@@ -5,8 +5,10 @@ Created on May 5, 2015
 '''
 
 '''
-Given a Pandas dataframe of states, compute the following:
-    - all edges between the nodes of the 
+
+This file contains a collection of methods to compute neighbors, edges, and connected components 
+based on a variety of different input.
+
 '''
 
 from collections import deque
@@ -19,8 +21,9 @@ import sqlite3 as db
 
 
 def topo_classes_subsets_defined_by_state_count(topo_classes_with_counts):
-    """ Input: [xi,x2,...,xn]; xi = [ti,ci] = [topo_class_hash, count_of_states]
-        Output: [ y1,y2,...,yn]; yi= [t1,t2,...tn]; ti= topo_class_hash; yi is constrained by sum(ci)  <= fixed amount
+    """ Input: List: [x_i,x_2,...,x_n]; x_i = [t_i,c_i] = [topo_class_hash_i, count_of_states_i]
+        Output: [ y_1,y_2,...,y_n]; y_i= [t_1,t_2,...t_n]; t_i= topo_class_hash;
+                yi is constrained by sum(c_i)<= fixed amount
     """
         
     max_node_count = 50000
@@ -43,7 +46,7 @@ def topo_classes_subsets_defined_by_state_count(topo_classes_with_counts):
 
 def compute_connected_components(states_dict):
     """ input dict structure:  (top_hash_int, bottom_hash_int, red_car_end_a) : game_number
-        output: [x1,x2,...nx] xi = [y1,y2]; y1 = list of state keys, y2 = list of edges: [game_number, game_number]
+        output: [x_1,x_2,...x_n]; x_i = [y_i_1,y_i_2]; y1 = list of state keys, y2 = list of edges: [game_number, game_number]
     """
     connected_components = []
     white_states_dict = dict(states_dict)
@@ -164,6 +167,11 @@ def compute_all_edges_from_state_dict(state_dict):
 
 
 def compute_neighbors_from_game_state_key( (top_hash, bottom_hash,red_car_end_a) ):
+	''' Using state key: (game top hash, game bottom hash, red car position), determine 
+	    all neighbors for the state defined by that given state kay. Return list of keys
+		for all neighbor states.
+	'''
+
     board_bit_string = from_two_ints_to_bit_string(top_hash,bottom_hash)
     nbrs_as_board_array = compute_neighbors_from_board_bit_string(board_bit_string,red_car_end_a)
     # [ b1,b2, .. bn] bi = [ board_as_array, red_car_end_a]
