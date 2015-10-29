@@ -58,10 +58,10 @@ def html_table_for_board_bit_string_component_coloring(board_bit_string,red_car_
     car_index = 0
     truck_index = 0
     
-    board_symbols[red_car_end_a] = RED_SYMBOL
-    board_symbols[red_car_end_a+1] = RED_SYMBOL
-    board_colors[red_car_end_a] = RED_COLOR
-    board_colors[red_car_end_a+1] = RED_COLOR
+    board_symbols[red_car_end_a] 	= RED_SYMBOL
+    board_symbols[red_car_end_a+1] 	= RED_SYMBOL
+    board_colors[red_car_end_a] 	= RED_COLOR
+    board_colors[red_car_end_a+1] 	= RED_COLOR
     
     data = zip(range(36),[ board_bit_string[i:i+3] for i in range(0,108,3)])
     verticals = sorted([x for x in data if x[1] in [VERTICAL_CAR,VERTICAL_TRUCK]], key=lambda x: x[0])
@@ -118,8 +118,8 @@ def html_table_for_board_array_construction_coloring(board_array,red_car_end_a):
     
 def html_table_for_board_bit_string_construction_coloring(board_bit_string,red_car_end_a):
     """The coloring scheme of this algorithm will color all nodes within a combinatorial class
-        in a consistent fashion. The colors will follow pieces as they move down the board in the 
-        recursive algorithm that calcuates all states for a given combinatorial class.
+        in a consistent fashion. The colors will follow pieces as they appear on the board in the 
+        recursive algorithm that calculates all states for a given combinatorial class.
     """
     board_symbols = [""] * 36
     board_colors = [""] * 36
@@ -129,16 +129,16 @@ def html_table_for_board_bit_string_construction_coloring(board_bit_string,red_c
     board_symbols[red_car_end_a+1] = RED_SYMBOL
     board_colors[red_car_end_a] = RED_COLOR
     board_colors[red_car_end_a+1] = RED_COLOR
-    board_string_split = [ board_bit_string[i:i+3] for i in range(0,108,3)]
+    board_array = [ board_bit_string[i:i+3] for i in range(0,108,3)]
     for i in range(36):
         if board_symbols[i] == "":
             
             # empty piece
-            if board_string_split[i] == "000":
+            if board_array[i] == "000":
                 board_colors[i] = BLANK_COLOR
 
             # vertical car
-            if board_string_split[i] == "001":
+            if board_array[i] == "001":
                 board_symbols[i]   = car_symbols[car_index]
                 board_symbols[i+6] = car_symbols[car_index]
                 board_colors[i]    = car_colors[car_index]
@@ -146,7 +146,7 @@ def html_table_for_board_bit_string_construction_coloring(board_bit_string,red_c
                 car_index = car_index + 1
 
             # vertical truck
-            if board_string_split[i] == "010":
+            if board_array[i] == "010":
                 board_symbols[i] = truck_symbols[truck_index]
                 board_symbols[i+6] = truck_symbols[truck_index]
                 board_symbols[i+12] = truck_symbols[truck_index]
@@ -156,7 +156,7 @@ def html_table_for_board_bit_string_construction_coloring(board_bit_string,red_c
                 truck_index = truck_index + 1
 
             # horizontal car
-            if board_string_split[i] == "011":
+            if board_array[i] == "011":
                 board_symbols[i] = car_symbols[car_index]
                 board_symbols[i+1] = car_symbols[car_index]
                 board_colors[i] = car_colors[car_index]
@@ -164,7 +164,7 @@ def html_table_for_board_bit_string_construction_coloring(board_bit_string,red_c
                 car_index = car_index + 1
 
             # horizontal truck
-            if board_string_split[i] == "100":
+            if board_array[i] == "100":
                 board_symbols[i] = truck_symbols[truck_index]
                 board_symbols[i+1] = truck_symbols[truck_index]
                 board_symbols[i+2] = truck_symbols[truck_index]
@@ -176,7 +176,7 @@ def html_table_for_board_bit_string_construction_coloring(board_bit_string,red_c
     html_data = zip(board_colors, board_symbols)
     html_cells = ['<td bgcolor="%s" style="width:30px; height:30px; vertical-align:middle; text-align:center">%s</td>' %x for x in html_data]
     return '<table>' + ''.join(['<tr>' + ''.join(html_cells[i:i+6]) + '</tr>'  for i in range(0,35,6)]) + '</table>'
-    #return  board_string_split
+    #return  board_array
 
 
 def html_table_for_df_index_construction_coloring(df_game_states, index):

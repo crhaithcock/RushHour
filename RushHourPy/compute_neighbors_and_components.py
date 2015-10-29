@@ -172,23 +172,23 @@ def compute_neighbors_from_game_state_key( (top_hash, bottom_hash,red_car_end_a)
 		for all neighbor states.
 	'''
 
-    board_bit_string = from_two_ints_to_bit_string(top_hash,bottom_hash)
-    nbrs_as_board_array = compute_neighbors_from_board_bit_string(board_bit_string,red_car_end_a)
+	board_bit_string = from_two_ints_to_bit_string(top_hash,bottom_hash)
+	nbrs_as_board_array = compute_neighbors_from_board_bit_string(board_bit_string,red_car_end_a)
     # [ b1,b2, .. bn] bi = [ board_as_array, red_car_end_a]
     # want: [ c1,c2, ... cn] ci = [top_hash_int, bottom_hash_int, red_car_end_a
     
-    board_bit_strings = [ from_array_to_bit_string(x[0]) for x in nbrs_as_board_array]
-    red_car_end_a_array = [x[1] for x in nbrs_as_board_array]
+	board_bit_strings = [ from_array_to_bit_string(x[0]) for x in nbrs_as_board_array]
+	red_car_end_a_array = [x[1] for x in nbrs_as_board_array]
     
-    hash_ints = [ [int(x[:54],2) , int(x[54:],2)] for x in board_bit_strings ]
-    
-    zipped = zip(hash_ints, red_car_end_a_array)
-    # zipped: [d1,d2,...dn] di = ( [top_hash_int, bottom_hash_int], red_car_end_a)
-    
-    nbrs_as_state_keys = [ (x[0][0], x[0][1], x[1] ) for x in zipped ]
-    #nbrs as state data: [ x1,x2,...xn] xi = [top_hash_int,  bottom_hash_int, red_car_end_a]
-    
-    return nbrs_as_state_keys
+	hash_ints = [ [int(x[:54],2) , int(x[54:],2)] for x in board_bit_strings ]
+
+	zipped = zip(hash_ints, red_car_end_a_array)
+	# zipped: [d1,d2,...dn] di = ( [top_hash_int, bottom_hash_int], red_car_end_a)
+
+	nbrs_as_state_keys = [ (x[0][0], x[0][1], x[1] ) for x in zipped ]
+	#nbrs as state data: [ x1,x2,...xn] xi = [top_hash_int,  bottom_hash_int, red_car_end_a]
+
+	return nbrs_as_state_keys
     
     
 
