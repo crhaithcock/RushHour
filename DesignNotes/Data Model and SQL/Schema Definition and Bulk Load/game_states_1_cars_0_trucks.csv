@@ -1,6 +1,0 @@
-game_number,comb_class_id,game_hash_top,game_hash_bottom,is_goal_state,optimal_neighbor,red_car_end_a,connected_component_id,topo_class_hash,degree
-1,2,110592,0,false,,12,,134217728,
-2,2,13824,0,false,,13,,134217728,
-3,2,1728,0,false,,14,,134217728,
-4,2,216,0,false,,15,,134217728,
-5,2,27,0,true,,16,,134217728,

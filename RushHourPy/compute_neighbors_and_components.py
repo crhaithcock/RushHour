@@ -206,7 +206,7 @@ def compute_neighbors_from_board_bit_string(board_bit_string, red_car_end_a):
     
     board_array = from_bit_string_to_array(board_bit_string)
     neighbors = []
-    pieces = from_bit_string_to_pieces_array(board_bit_string)
+    pieces = board_as_bit_string(board_bit_string)
 
     for piece in pieces:
         # if horizontal car not on left edge and piece to left is blank, move car left one piece
