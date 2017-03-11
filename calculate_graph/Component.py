@@ -44,7 +44,7 @@ class Component:
 		
 		
     @classmethod
-	def from_state(cls,State):
+    def from_state(cls,State):
 		""" Derive the component containing the given State."""
 		
 		root = copy.deepcopy(State)
@@ -54,7 +54,7 @@ class Component:
 	
 	
 	
-	def derive_component_from_root(self):
+    def derive_component_from_root(self):
 		#Derive all reachable nodes from root following the rules of the RH puzzle using a breath first search.
 		#Note each node of the component graph is associated with State object.
 		#We create an arbitrary list of integers to use with nxGraph, and we keep a dictionary
@@ -123,10 +123,8 @@ class Component:
 				
 				grey_states.append(white_state)
 			
-	@property 
-	def distance_partition(self):
-		
-		
+    @property 
+    def distance_partition(self):	
 		if self._distance_partition:
 			return self._distance_partition
 			
@@ -171,7 +169,7 @@ class Component:
 		return self._distance_partition
 		
 		 
-	def optimal_path(self,state):
+    def optimal_path(self,state):
 		#return self._optimal_paths[s]
 		""" Identify a path from a given State to a solution that is as short any other path to a solution. 
 			Note, even though there may be more than one such path, this method only returns one such path."""
@@ -202,7 +200,7 @@ class Component:
 	#  	select a state and see the optimal path light update
 	#	
 	
-	def distance_partition_layout(self):
+    def distance_partition_layout(self):
 		x_delta = 50
 		y_delta = 50
 		pos = {}
@@ -212,7 +210,7 @@ class Component:
 		return pos
 
 	
-	def svg_neighborhood(self,center):
+    def svg_neighborhood(self,center):
 		width = 500
 		height = 500
 		cx = width / 2
@@ -262,12 +260,12 @@ class Component:
 		
 		return svg
 		
-		
-	def draw_distance_graph(self):
+	
+    def draw_distance_graph(self):
 		"""Draw using matplotlib. Draw a graph with one node for each cell and weighted edges for number of edges between cells."""
 		pass
 				
-	def svg_distance_partition(self):
+    def svg_distance_partition(self):
 		
 		num_cells = len(self.distance_partition)
 		max_nodes = max([len(self.distance_partition[x]) for x in self.distance_partition])
