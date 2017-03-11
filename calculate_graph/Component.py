@@ -1,12 +1,8 @@
 
-# 
-#
-#  	A set of states has been calculated most likely using a combinatorial algorithm. This module contains
-#	the code to calculate the edge structure between those states.
 
-#	The approach is to follow breadth first search. Along the way we will also capture the connected components and record these
-#	structures as we go.
-#
+#  A set of states has been calculated most likely using a combinatorial algorithm. 
+# This module contains the code to calculate the edge structure between those states.
+
 
 import copy
 import State
@@ -19,10 +15,13 @@ import math
 
 
 class Component:
-	
-	def __init__(self,root = None):
+    ''' A component encodes the RH Graph for a single instance of a RH puzzle using breath first search.
+	    Note that each NxGraph is associated with a State object.
+	'''
+
+    def __init__(self,root = None):
 			
-		# Graph Data
+		# Graph Data (nxGraph)
 		self.graph = None
 		self.root = root
 		self.state_node_map = {} #dictionary to map states to nodes
@@ -38,13 +37,13 @@ class Component:
 		if self.root is not None:
 			self.derive_component_from_root()
 			
-	@classmethod
-	def from_keys(cls,keysDict):
+    @classmethod
+    def from_keys(cls,keysDict):
 		""" Instantiate an instance of Component based on data from a data store rather than derive from a single state."""
 		pass
 		
 		
-	@classmethod
+    @classmethod
 	def from_state(cls,State):
 		""" Derive the component containing the given State."""
 		
@@ -56,6 +55,10 @@ class Component:
 	
 	
 	def derive_component_from_root(self):
+		#Derive all reachable nodes from root following the rules of the RH puzzle using a breath first search.
+		#Note each node of the component graph is associated with State object.
+		#We create an arbitrary list of integers to use with nxGraph, and we keep a dictionary
+		#to map each node's integer id to that node's associated State object.
 
 		if self.root is None:
 			return
@@ -67,13 +70,16 @@ class Component:
 		grey_states = deque()
 		black_states = deque()
 		
-		# node ids for graph generated as we go. Need dictionary to map state objects to their associated nodes
+
+
 		state_nodeid_map = {}
 		id_gen = itertools.count(1)
 		reverse_direction = {'left':'right', 'right':'left', 'up':'down', 'down':'up'}
 
 		node_id = next(id_gen)
 		state_nodeid_map[self.root] = node_id
+
+		# Follow breadht
 		self.graph.add_node(node_id,stateObj=self.root)
 		self.state_node_map[self.root] = node_id
 		grey_states.append(self.root)
