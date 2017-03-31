@@ -5,8 +5,8 @@
 A collection of states as defined by the cards available in the board game.
 
 """
-from State import State
-from Component import Component
+from state import State
+from component import Component
 
 #######################################
 #
