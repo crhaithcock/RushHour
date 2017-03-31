@@ -6,6 +6,7 @@ A collection of states as defined by the cards available in the board game.
 
 """
 from State import State
+from Component import Component
 
 #######################################
 #
