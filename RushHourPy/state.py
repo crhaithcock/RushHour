@@ -1,12 +1,14 @@
 
 import copy
-import pdb
+
 import collections
 import functools
 
+import constants
+
 Piece = collections.namedtuple('Piece', 'end_a end_b topology color symbol')
 
-class State(Object):
+class State:
     """ State encapsulates all of the data and algorthms to follow the rules of Rush Hour to
         move from one state to another by moving a piece on the game board.BaseException
 
@@ -22,40 +24,36 @@ class State(Object):
 
 
     """
-    BLANK_SPACE = '000'
-    VERTICAL_CAR = '001'
-    HORIZONTAL_CAR = '011'
-    VERTICAL_TRUCK = '100'
-    HORIZONTAL_TRUCK = '010'
+    BLANK_SPACE = constants.BLANK_SPACE
+    VERTICAL_CAR = constants.VERTICAL_CAR
+    HORIZONTAL_CAR = constants.HORIZONTAL_CAR
+    VERTICAL_TRUCK = constants.VERTICAL_TRUCK
+    HORIZONTAL_TRUCK = constants.HORIZONTAL_TRUCK
 
     def pp(self):
-        print ("Class: ", self.__class__)
+        print("Class: ", self.__class__)
         for key in self.__dict__:
-            print (key, ": ", self.__dict__[key])
+            print(key, ": ", self.__dict__[key])
 
     def __repr__(self):
         return "%s(%r)" % (self.__class__, self.__dict__)
 
-    def __init__(self, **kwargs):
-        self.board_top_hash = None
-        self.board_bottom_hash = None
-        self.is_final_state = None
-        self.red_car_end_a = None
+    def __init__(self, red_car_end_a, top_hash, bottom_hash):
+        self.board_top_hash = top_hash
+        self.board_bottom_hash = bottom_hash
+        self.red_car_end_a = red_car_end_a
+
         self.board_as_bit_string = ''
         self.board = []
         self.pieces = []
-
+        self.is_final_state = None
+        self.soln_dist = None
         self.svg_grid_size = 30
         self.svg_board_size = self.svg_grid_size  * 6
+        self._comb_class = None
 
-        if 'red_car_end_a' in kwargs:
-            self.red_car_end_a = kwargs['red_car_end_a']
-        if 'board_top_hash' in kwargs:
-            self.board_top_hash = kwargs['board_top_hash']
-        if 'board_bottom_hash' in kwargs:
-            self.board_bottom_hash = kwargs['board_bottom_hash']
-
-        if self.isValid():
+        
+        if self.is_valid():
             self.set_derived_fields()
             self.color_and_label_pieces_topologically()
 
@@ -69,13 +67,12 @@ class State(Object):
 #    def full_data(self):
 #        pass
 
-#    def key(self):
-#
-#        return (self.top_hash, self.bottom_hash, self.red_car_end_a)
-#        pass
+    def key(self):
+        return (self.red_car_end_a,self.board_top_hash, self.board_bottom_hash)
+    
 
 
-    def __is_valid(self):
+    def is_valid(self):
         """Confirm values set for the state are consistent with the internal data model
             and the rules of the Rush Hour game"""
         if self.board_top_hash is None:
@@ -98,7 +95,7 @@ class State(Object):
 
     def set_derived_fields(self):
         """Sets derived fields such as board_as_bit_string."""
-        if self.isValid():
+        if self.is_valid():
             self.board_as_bit_string = bin(self.board_top_hash)[2:].zfill(54) +\
                                        bin(self.board_bottom_hash)[2:].zfill(54)
             self.board = [self.board_as_bit_string[i:i+3] for i in range(0, 108, 3)]
@@ -106,6 +103,7 @@ class State(Object):
 
             if self.red_car_end_a == 16:
                 self.is_final_state = True
+                self.soln_dist = 0
             else:
                 self.is_final_state = False
 
@@ -142,9 +140,9 @@ class State(Object):
         nbr = copy.deepcopy(self)
         nbr_board = nbr.board()
 
-        new_board[car_end_a - 1] = self.HORIZONTAL_CAR
-        new_board[car_end_a + 1] = self.BLANK_SPACE
-        nbr.set_board_hash_from_array(new_board)
+        nbr_board[car_end_a - 1] = self.HORIZONTAL_CAR
+        nbr_board[car_end_a + 1] = self.BLANK_SPACE
+        nbr.set_board_hash_from_array(nbr_board)
 
         if self.red_car_end_a == car_end_a:
             nbr.red_car_end_a = nbr.red_car_end_a - 1
@@ -226,6 +224,10 @@ class State(Object):
            piece.topology not in [self.HORIZONTAL_CAR, self.HORIZONTAL_TRUCK]:
             return False
         return self.board[piece.end_b + 1] == self.BLANK_SPACE
+if piece.end_b % 6 == 5 or\
+           piece.topology not in [self.HORIZONTAL_CAR, self.HORIZONTAL_TRUCK]:
+            return False
+        return self.board[piece.end_b + 1] == self.BLANK_SPACE
 
     def can_move_up(self, piece):
         """Moving a piece up requires piece to not be on top edge
@@ -277,9 +279,20 @@ class State(Object):
         nbr_state_dict = {'red_car_end_a':red_car_end_a,\
                           'board_top_hash':board_top_hash,\
                           'board_bottom_hash':board_bottom_hash}
-        nbr_state = State(**nbr_state_dict)
+        nbr_state = State(red_car_end_a, board_top_hash, board_bottom_hash)
         return nbr_state
 
+
+    def print_board(self):
+        
+        cmap = {self.BLANK_SPACE:"    ", self.VERTICAL_CAR:" 2v ", self.HORIZONTAL_CAR:" 2h ",\
+                self.VERTICAL_TRUCK:" 3v ", self.HORIZONTAL_TRUCK:" 3h "}
+
+        display_board = [cmap[x] for x in self.board]
+
+        for x in range(0,36,6):
+            print(display_board[x:x+6])
+    
 
     def derive_neighbors(self):
         """ Derives neighbors of this State based on the rules of Rush Hour.
@@ -290,22 +303,25 @@ class State(Object):
         for piece in self.pieces:
             if self.can_move_left(piece):
                 nbr = self.derive_state_by_moving_piece(piece, 'left')
-                neighbors.append([nbr, 'left'])
+                nbr_dict = {'state': nbr, 'direction':'left'}
+                neighbors.append(nbr_dict)
 
             if self.can_move_right(piece):
                 nbr = self.derive_state_by_moving_piece(piece, 'right')
-                neighbors.append([nbr, 'right'])
+                nbr_dict = {'state': nbr, 'direction':'right'}
+                neighbors.append(nbr_dict)
 
             if self.can_move_down(piece):
                 nbr = self.derive_state_by_moving_piece(piece, 'down')
-                neighbors.append([nbr, 'down'])
+                nbr_dict = {'state': nbr, 'direction':'down'}
+                neighbors.append(nbr_dict)
 
             if self.can_move_up(piece):
                 nbr = self.derive_state_by_moving_piece(piece, 'up')
-                neighbors.append([nbr, 'up'])
+                nbr_dict = {'state': nbr, 'direction':'up'}
+                neighbors.append(nbr_dict)
+
         return neighbors
-
-
 
 
 
@@ -316,15 +332,15 @@ class State(Object):
     ##
     ############################################
 
-    car_symbols = ['Q', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L']
-    truck_symbols = ['T', 'R', 'W', 'Z']
-    car_colors = ['7FFF00', '7FFFD4', 'D2691E', '8B008B', 'BDB76B', '8B0000', 'FF1493',\
-                  '1E90FF', 'FFD700', 'ADFF2F', 'CD5C5C', 'F0E68C']
-    truck_colors = ['F08080', 'FFA07A', 'FF00FF', '00FA9A']
+    car_symbols = constants.CAR_SYMBOLS
+    truck_symbols = constants.TRUCK_SYMBOLS
+    car_colors = constants.CAR_COLORS_NO_HASH
+    truck_colors = constants.TRUCK_COLORS_NO_HASH
 
-    RED_COLOR = 'FF0000'
-    RED_SYMBOL = 'X'
-    BLANK_COLOR = "E6E6E6"
+    RED_COLOR = constants.RED_COLOR_NO_HASH
+    RED_SYMBOL = constants.RED_SYMBOL
+
+    BLANK_COLOR = constants.BLANK_COLOR_NO_HASH
 
     def sort_pieces_topologically(self):
         """Sorting pieces topologically allows applying a labeling algorithm
@@ -379,6 +395,120 @@ class State(Object):
 
     def sort_pieces_combintorially(self):
         self.pieces = sorted(self.pieces, key=lambda p: p.end_a)
+
+
+    def degree(self):
+        deg = 0
+        for p in self.pieces:
+            if self.can_move_down(p):
+               deg += 1
+            if self.can_move_left(p):
+                deg +=1
+            if self.can_move_right(p):
+                deg +=1
+            if self.can_move_up(p):
+                deg +=1
+
+        return deg
+
+            
+        
+
+    def topo_class_1(self):
+        """
+            Topological Class 1 defined by the number of vertical cars, number of vertcial trucks,
+            number of horizontal cars, and number of horizontal trucks
+
+            Output: string encoding of topological class 1. 
+            Example: 2vc_0vt_3hc_1ht encodes 2 vertical cars, 0 vertical trucks, 3 horizontal cars, and
+                     1 horizontal truck. 
+        """
+
+        v_cars = len([p for p in self.pieces if p.topology == self.VERTICAL_CAR]))
+        v_trucks = len(sorted([p for p in self.pieces if p.topology == self.VERTICAL_TRUCK])
+        h_cars = len(sorted([p for p in self.pieces if p.topology == self.HORIZONTAL_CAR])
+        h_trucks = len(sorted([p for p in self.pieces if p.topology == self.HORIZONTAL_TRUCK])
+
+        return "{!s}vc_{!s}vt_{!s}hc_{!s}ht".format(v_cars, v_trucks,h_cars,h_trucks)
+        
+    
+    def topo_class_2(self):
+        """
+            Topological Class 2 is a refinement of Topological Class 1.
+
+            We capture a row by row and column by column
+
+            Possible outcomes per a given row or column:
+                
+                * empty
+                * one car
+                * two cars
+                * one car & one truck
+                * two trucks
+
+        """
+
+        vertical = [ p for p in self.pieces if p.topology in [self.VERICAl_CAR, self.VERTICAL_TRUCK]]
+        
+        horizontal = [p for p in self.pieces if p.topology in [self.HORIZONTAL_CAR,self.HORIZONTAL_TRUCK]]
+    
+
+        #rows[1] = [p for p in horizontal if p.end_a >= 0 and p.end_a < 6]
+        #rows[2] = [p for p in horizontal if p.end_a >= 6 and p.end_a < 12 ]
+        rows = [ [p.length for p in horizontal if p.end_a >= 6(i-1) and p.end_a < 6i] for i in range(6) ]
+
+        cols = [ [p.length for p in vertical if mod(p.end_a) == i] for i in range(6))
+
+        col_hash = ''
+        row_hash = ''
+        for i in range(6):
+            row = rosw[i]
+            col = cols[i]
+
+            if row == []:
+                row_hash = row_hash + constants.EMPTY
+            if row == [2]:
+                row_hash = row_hash + constants.ONE_CAR
+            if row == [2,2]:
+                row_hash = row_hash + constants.TWO_CAR
+            if row == [2,2,2]:
+                row_hash = row_hash + constants.THREE_CAR
+            if row == [3]:
+                row_hash = row_hash + constants.ONE_TRUCK
+            if row == [3,3]:
+                row_hash = row_hash + constants.TWO_TRUCK
+            if row == [2,3]:
+                row_hash = row_hash + constants.ONE_CAR_ONE_TRUCK
+            if row == [3,2]:
+                row_hash = row_hash + constants.ONE_TRUCK_ONE_CAR
+            
+            if col == []:
+                col_hash = col_hash + constants.EMPTY
+            if col == [2]:
+                col_hash = col_hash + constants.ONE_CAR
+            if col == [2,2]:
+                col_hash = col_hash + constants.TWO_CAR
+            if col == [2,2,2]:
+                col_hash = col_hash + constants.THREE_CAR
+            if col == [3]:
+                col_hash = col_hash + constants.ONE_TRUCK
+            if col == [3,3]:
+                col_hash = col_hash + constants.TWO_TRUCK
+            if col == [2,3]:
+                col_hash = col_hash + constants.ONE_CAR_ONE_TRUCK
+            if col == [3,2]:
+                col_hash = col_hash + constants.ONE_TRUCK_ONE_CAR
+
+                                
+
+    @property
+    def combinatorial_class(self):
+        if not self._comb_class:
+            num_cars = len([p for p in self.pieces if p.topology in (self.VERTICAL_CAR ,self.HORIZONTAL_CAR) ])
+            num_trucks = len([p for p in self.pieces if p.topology in (self.VERTICAL_TRUCK,self.HORIZONTAL_TRUCK)])
+            self._comb_class = 2**num_cars * 3**num_trucks
+
+        return self._comb_class
 
 
     @property
@@ -581,11 +711,6 @@ class State(Object):
 
 
 
-#example state from board with 2 cars and 2 trucks.
-STATE_DICT = {'board_top_hash':7599893090940448,\
-              'board_bottom_hash':2200105390080,\
-              'red_car_end_a':13}
-TEST_STATE = State(**state_dict)
 
 
 

@@ -7,16 +7,32 @@
 import sqlite3
 import collections
 
-BLANK_SPACE = '000'
-VERTICAL_CAR = '001'
-VERTICAL_TRUCK = '010'
-HORIZONTAL_CAR = '011'
-HORIZONTAL_TRUCK = '100'
+import state
+import constants
+
+BLANK_SPACE = constants.BLANK_SPACE
+VERTICAL_CAR = constants.VERTICAL_CAR
+VERTICAL_TRUCK = constants.VERTICAL_TRUCK
+HORIZONTAL_CAR = constants.HORIZONTAL_CAR
+HORIZONTAL_TRUCK = constants.HORIZONTAL_TRUCK
+
+# global db connection to be resused without reopening the connection
+db_conn = None  #sqlite3 connection
+db_cur = None   # sqlite3 cursor
 
 
+# global counters
+num_states = 0
+num_soln_states = 0
 
+
+# data to manage saving batches of records.
+BATCH_SIZE = 50000
 states_to_save = collections.deque()
 record_count = 0
+batch_count = 0
+
+
 
 # The recursion ends with a completed state that can be recorded.
 #
@@ -48,10 +64,17 @@ def add_piece(end_a, piece_topology):
     for board_space in TOPOLOGY_OFFSET[piece_topology]:
         BOARD[board_space+end_a] = piece_topology
 
+
+
+
 def remove_piece(end_a, piece_topology):
     """ Remove piece from board. """
     for board_space in TOPOLOGY_OFFSET[piece_topology]:
         BOARD[board_space+end_a] = BLANK_SPACE
+
+
+
+
 
 def board_is_open(end_a, piece_topology):
     """Check that that the board is open to allow placement of piece """
@@ -76,30 +99,75 @@ def board_is_open(end_a, piece_topology):
     return all([BOARD[x] == BLANK_SPACE for x in board_positions])
 
 
+def open_db(num_cars,num_trucks):
+    global db_conn
+    global db_cur
+
+    db_name = "rush_hour_{!s}_cars_{!s}_trucks.db".format(num_cars,num_trucks)
+    db_path = "./database/"+db_name
+    db_conn = sqlite3.connect(db_path)
+    db_conn.isolation_level = None
+    db_cur = db_conn.cursor()
+
+    print("Opened DB: " + db_path)
+    # create tables statement
+    with open('./database/rush_hour_tables_ddl.sql', 'r') as sqlfile:
+        sql=sqlfile.read()
+
+    db_cur.executescript(sql)
+    db_conn.commit()
+
+
+
+def close_db():
+    global db_cur
+    global db_conn
+
+    db_conn.close()
+
+
+
 def generate_states(num_cars, num_trucks):
     """ Generate all possible states for the input combinatorial class."""
+    global db_conn
+
+    open_db(num_cars,num_trucks)
 
     comb_class = 2**num_cars*3**num_trucks
     red_car_positions = range(12, 17)
 
-    for end_a in red_car_positions:
-        red_car_end_a = end_a
-        add_piece(end_a, HORIZONTAL_CAR)
-        place_remaining_pieces(0, num_cars-1, num_trucks, red_car_end_a, comb_class)
-        remove_piece(end_a, HORIZONTAL_CAR)
+    sql = "insert into combinatorial_class (id,num_cars,num_trucks)values({!s},{!s},{!s})"\
+           .format(comb_class,num_cars,num_trucks)
+    db_conn.commit()
 
-    flush_data()
+
+    for red_car_end_a in red_car_positions:
+
+        print("Initializing With Red Car in Position: %d"%(red_car_end_a))
+        add_piece(red_car_end_a, HORIZONTAL_CAR)
+        #print_board(red_car_end_a)
+
+        place_remaining_pieces(0, num_cars-1, num_trucks, red_car_end_a, comb_class)
+        remove_piece(red_car_end_a, HORIZONTAL_CAR)
+
+    flush_data(comb_class)
+
+    close_db()
+
+
+
+
+
 
 def place_remaining_pieces(cur_position, num_cars, num_trucks, red_car_end_a, comb_class):
     """ Recursive algorithm to complete placing pieces on the board."""
-    global BOARD
 
     # short circuit recursion for impossible configurations
 
     # if remaining pieces require more spaces than available, bail out of recursion
     if (len(BOARD) - cur_position) < 2*num_cars + 3 * num_trucks:
         return
-    
+
 
 
     if num_cars == num_trucks == 0:
@@ -110,75 +178,113 @@ def place_remaining_pieces(cur_position, num_cars, num_trucks, red_car_end_a, co
 
     if num_cars > 0:
         for pos in range(cur_position, len(BOARD)):
-            if board_is_open(pos, VERTICAL_CAR):
-                add_piece(pos, VERTICAL_CAR)
-                place_remaining_pieces(pos + 1, num_cars - 1, num_trucks, red_car_end_a, comb_class)
-                remove_piece(pos, VERTICAL_CAR)
 
             if board_is_open(pos, HORIZONTAL_CAR):
                 add_piece(pos, HORIZONTAL_CAR)
+                #print_board(red_car_end_a)
                 place_remaining_pieces(pos+2, num_cars-1, num_trucks, red_car_end_a, comb_class)
                 remove_piece(pos, HORIZONTAL_CAR)
 
+            if board_is_open(pos, VERTICAL_CAR):
+                add_piece(pos, VERTICAL_CAR)
+                #print_board(red_car_end_a)
+                place_remaining_pieces(pos + 1, num_cars - 1, num_trucks, red_car_end_a, comb_class)
+                remove_piece(pos, VERTICAL_CAR)
+
     if num_trucks > 0:
         for pos in range(cur_position, len(BOARD)):
-            if board_is_open(pos, VERTICAL_TRUCK):
-                add_piece(pos, VERTICAL_TRUCK)
-                place_remaining_pieces(pos + 1, num_cars-1, num_trucks, red_car_end_a, comb_class)
-                remove_piece(pos, VERTICAL_TRUCK)
 
             if board_is_open(pos, HORIZONTAL_TRUCK):
                 add_piece(pos, HORIZONTAL_TRUCK)
+                #print_board(red_car_end_a)
                 place_remaining_pieces(pos+3, num_cars, num_trucks-1, red_car_end_a, comb_class)
                 remove_piece(pos, HORIZONTAL_TRUCK)
 
 
+            if board_is_open(pos, VERTICAL_TRUCK):
+                add_piece(pos, VERTICAL_TRUCK)
+                #print_board(red_car_end_a)
+                place_remaining_pieces(pos + 1, num_cars, num_trucks-1, red_car_end_a, comb_class)
+                remove_piece(pos, VERTICAL_TRUCK)
 
 
-BATCH_SIZE = 50000
-states_to_save = collections.deque()
-record_count = 0
-batch_count = 0
+
+
+
+comb_class_
+
 def record_state(red_car_end_a=None, top_hash_int=None,\
                  bottom_hash_int=None, comb_class=None):
 
-    """ Record State Information in SQLITE"""
     global states_to_save
     global record_count
-    global cur
     global batch_count
+    global db_cur
+    global num_soln_states
+    global num_states
 
     if red_car_end_a:
         states_to_save.append([red_car_end_a, top_hash_int, bottom_hash_int, comb_class])
         record_count = record_count + 1
+        num_states = num_states + 1
+        if red_car_end_a == 16:
+            num_soln_states = num_soln_states + 1
 
     if record_count >= BATCH_SIZE:
+    #if False:
         batch_count = batch_count + 1
-        print("saving batch %d of size %d" %(batch_count, len(states_to_save)))
-        conn = sqlite3.connect("./data/rush_hour.db")
-        conn.isolation_level = None
-        cur = conn.cursor()
-        cur.execute("begin")
-        for state in states_to_save:
-            insert_str = """insert into game_state(red_car_end_a,game_hash_top
-                            , game_hash_bottom , comb_class_id)
-                            values ({!s}, {!s} , {!s} ,{!s})"""\
-                            .format(state[0], state[1], state[2], state[3])
-            cur.execute(insert_str)
-        cur.execute("commit")
-        conn.close()
+        
+        if red_car_end_a is None:
+            red_car_end_a = 'None'
+        print("saving batch {!s} of size {!s}. red car position: {!s}".format(batch_count, len(states_to_save),red_car_end_a))
+        
+
+        sql = """insert into state(red_car_end_a,game_hash_top
+                            , game_hash_bottom , comb_class_id,is_soln_state)
+                            values (?,?,?,?,?)"""
+        non_soln_params = [ [s[0],s[1],s[2],s[3],0] for s in states_to_save if s[0] != 16]
+        soln_params = [ [s[0],s[1],s[2],s[3],1] for s in states_to_save if s[0] == 16]
+        params = non_soln_params + soln_params
+        db_cur.execute("begin")
+        db_cur.executemany(sql,params)
+        db_cur.execute("commit")
 
         states_to_save = collections.deque()
         record_count = 0
 
-def flush_data():
+
+
+
+def flush_data(comb_class):
     """ Record State Information in SQLITE"""
-    global states_to_save
+    
     global record_count
+    global num_soln_states
+    global num_states
 
     record_count = BATCH_SIZE + 1
 
     record_state()
+    
+
+    # !!!!TODO Updated comb_class with state counts
+    sql = "update combinatorial_class set num_state = {!s} and num_soln_states = {!s}"\
+          .format(num_states,num_soln_states)
+    
+    #!!!! HERE
+    # What can be measured while passing through the states?
+    # Topology distributions:
+    #       Comb_class_id
+    #       Topo_Class_id
+    #       num_states
+    #
+    # Looking for levels to slice apart sets of states for in-memory analysis.
+    #   
+
+
+
+
+
 
 
 def board_to_ints():
@@ -191,7 +297,7 @@ def board_to_ints():
 
 #begin script
 
-generate_states(2,2)
+#generate_states(2,2)
 #for num_cars in range(1,13):
 #    for num_trucks in range(5):
 #        generate_states(num_cars,num_trucks)

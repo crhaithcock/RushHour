@@ -11,12 +11,15 @@ import itertools
 import pdb
 import math
 import networkx as nx
+import sqlite3
+
+
 import state
 
 
 
 
-class Component(Object):
+class Component(object):
     ''' A component encodes the RH Graph for a single instance
         of a RH puzzle using breath first search.
         Note that each NxGraph is associated with a State object.
@@ -38,21 +41,29 @@ class Component(Object):
         if self.root is not None:
             self.derive_component_from_root()
 
+
     @classmethod
-    def from_keys(cls, keys_dict):
-        ''' Instantiate an instance of Component based on data from a
-            data store rather than derive from a single state.
-        '''
+    def from_keys(cls, nodes, edges):
         pass
 
+
+    def _graph_from_sqlite(self,comp_id):
+        
+        sql = '''select red_car_end_a, top_hash_int, bottom_hash,nx_node_id 
+                 from state where component_id = {!s}'''.format(comp_id)        
+        
+        pass
+    
 
     @classmethod
     def from_state(cls, state):
         """ Derive the component containing the given State."""
 
-        root = copy.deepcopy(state)
-        derive_component_from_root()
-        return cls(state(root))
+        comp = Component()
+        comp.root = copy.deepcopy(state)
+        comp.derive_component_from_root()
+        return comp
+
 
     def derive_component_from_root(self):
         ''' Derive all reachable nodes from root following the rules of
@@ -73,12 +84,12 @@ class Component(Object):
 
 
 
-        state_nodeid_map = {}
+        self.state_node_map = {}
         id_gen = itertools.count(1)
         reverse_direction = {'left':'right', 'right':'left', 'up':'down', 'down':'up'}
 
         node_id = next(id_gen)
-        state_nodeid_map[self.root] = node_id
+        self.state_node_map[self.root] = node_id
 
         # Follow breadht
         self.graph.add_node(node_id, stateObj=self.root)
@@ -91,87 +102,156 @@ class Component(Object):
 
             state = grey_states.popleft()
             #pdb.set_trace()
-            node_id = state_nodeid_map[state]
+            node_id = self.state_node_map[state]
 
             black_states.append(state)
 
             # maybe have State return a dict rather than list of 2-elt lists.
             nbrs = state.derive_neighbors()
 
-            black_nbrs = [k for k in nbrs if k[0] in black_states]
-            grey_nbrs = [k for k in nbrs if k[0] in grey_states]
+            black_nbrs = [k for k in nbrs if k['state'] in black_states]
+            grey_nbrs = [k for k in nbrs if k['state'] in grey_states]
             white_nbrs = [k for k in nbrs if k not in black_nbrs and k not in grey_nbrs]
 
             #pdb.set_trace()
 
             for nbr in grey_nbrs:
 
-                nbr_state = nbr[0]
-                nbr_direction = nbr[1]
-                nbr_node_id = state_nodeid_map[nbr_state]
-                self.graph.add_edge(node_id, nbr_node_id, direction=dir)
-                self.graph.add_edge(nbr_node_id, node_id, direction=reverse_direction[dir])
+                grey_state = nbr['state']
+                grey_direction = nbr['direction']
+                grey_node_id = self.state_node_map[grey_state]
+                self.graph.add_edge(node_id, grey_node_id, direction=grey_direction)
+                self.graph.add_edge(grey_node_id, node_id, direction=reverse_direction[grey_direction])
+            
+            for nbr in white_nbrs:
+                white_state = nbr['state']
+                white_direction = nbr['direction']
+                white_id = next(id_gen)
 
-            for [white_state, dir] in white_nbrs:
-
-                state_nodeid_map[white_state] = next(id_gen)
-                white_id = state_nodeid_map[white_state]
                 self.graph.add_node(white_id, stateObj=white_state)
                 self.state_node_map[white_state] = white_id
 
-                self.graph.add_edge(node_id, white_id, direction=dir)
-                self.graph.add_edge(white_id, node_id, direction=reverse_direction[dir])
+                self.graph.add_edge(node_id, white_id, direction=white_direction)
+                self.graph.add_edge(white_id, node_id, direction=reverse_direction[white_direction])
 
                 grey_states.append(white_state)
 
+
     @property
     def distance_partition(self):
-        ''' TBD - docstring'''
-        if self._distance_partition:
+        ''' TBD - docstring - consider block model.'''
+
+        # calc once
+        if self._distance_partition == None:
+            self._define_distance_partition()
+            return self._distance_partition
+        else:
             return self._distance_partition
 
+
+    
+
+    def _define_distance_partition(self):
+        
+
         graph = self.graph
-
-        final_states = [n for n in nx.nodes_iter(G) if graph.node[n]['stateObj'].is_final_state]
-        non_final_states = [n for n in graph.nodes() if n not in final_states]
-        self._distance_partition = {}
+        distance_partition = self._distance_partition
+        distance_partition = {}
 
 
-        #!!!! TODO - HERE. Fix ME!!
-        for state in non_final_states:
+        final_nodes = [n for n in graph.nodes() if graph.node[n]['stateObj'].is_final_state]
+        if len(final_nodes) == 0:
+            return
 
-            # Note, we only find a minimal solution to one final_state.
-            # There may be multiple minimal paths to more than one state.
-            # Finding the one minimal path supports game play hints and determining.
-            # the distance partition for the game component.
-            # There is potential value in finding larger subsets of minimal paths as
-            # part of a measure of difficulty.
+        # Boot strap first two partitions, then loop through the rest.
+        distance_partition[0] = {}
+        distance_partition[0]['nodes'] = set(final_nodes)
+        
+        p0_edges = graph.in_edges(final_nodes)
+        p0_nbrs = set([ e[0] for e in p0_edges])
 
-            # For each final state f_state find a minimal path from n to f_state
-            soln_paths = {f_state: [x for x in nx.shortest_path(G, state, f_state)] \
-                            for f_state in final_states}
+        
+       
 
-            # Across all the minimal n-f_state paths, find the shortest length
-            soln_path_lengths = {f_state: len(soln_paths[f_state]) for f_state in final_states}
-            shortest_soln_path_len = min([x for x in soln_path_lengths.values()])
-            soln_dist = shortest_soln_path_len - 1
+        frontier_dist = 0
+        new_frontier_nodes = p0_nbrs - set(final_nodes)
+        while len(new_frontier_nodes) > 0:
+            distance_partition[frontier_dist+1] = {}
+            distance_partition[frontier_dist+1]['nodes'] = new_frontier_nodes
+            
+            frontier_dist = frontier_dist + 1
 
-            # Record one of the minmial solution paths
-            min_dist_f_state = [f_state for f_state in soln_path_lengths.keys() \
-                    if soln_path_lengths[f_state] == shortest_soln_path_len][0]
+            nbrs = set([ e[0] for e in graph.in_edges(new_frontier_nodes)])
+            partioned_nbrs = distance_partition[frontier_dist-1]['nodes'] | distance_partition[frontier_dist]['nodes']     
+            new_frontier_nodes = nbrs - partioned_nbrs
+
+        self._distance_partition = copy.deepcopy(distance_partition)
+
+    
+
+                        
+
+        
+    def _set_distance_partition_nodes(self):
+        # Note, we only find a minimal solution to one final_state.
+        # There may be multiple minimal paths to more than one state.
+        # Finding the one minimal path supports game play hints and determining.
+        # the distance partition for the game component.
+        # There is potential value in finding larger subsets of minimal paths as
+        # part of a measure of difficulty.
+
+        # For each non final state, build all paths to all final states.
+        # From this set of many solution paths, choose one of minimal length.
+
+        
+        graph = self.graph
+        self._distance_partition['nodes'] = {}
+
+        final_nodes = [n for n in graph.nodes() if graph.node[n]['stateObj'].is_final_state]
+        non_final_nodes = [n for n in graph.nodes() if n not in final_nodes]
+           
+            # Across all of those minimal paths, find a shortest path.
+            # That shortest path defines (in part or whole):
+            #             solution distance (steps to solve);
+            #             optimal move neighbor (solution hint)
+            #             distance partition
+            #             distance graph (weighted nodes and weighted edges)
+
+            # Across all the many solution paths starting with node, find the shortest length path
+            # Extract a shortest length path
+            # defines:
+            #   solution_distance
+            #   a mimimal solution path
+        
+        for node in non_final_nodes:
+            
+            shortest_soln_paths = {f_node: [path for path in nx.shortest_path(graph, node, f_node)] \
+                            for f_node in final_nodes}
+            soln_lens = {f_node:len(shortest_soln_paths[f_node]) for\
+                         f_node in shortest_soln_paths.keys()}
+            min_soln_len = min([soln_lens[n] for n in soln_lens])
+
+            min_soln_path = [shortest_soln_paths[f_node] for f_node in soln_lens\
+                            if soln_lens[f_node] == min_soln_len][0]
+
+            soln_dist = min_soln_len -1 
+            self.graph.node[node]['soln_dist'] = soln_dist 
+
+            self.graph.node[node]['soln_path'] = min_soln_path
+            self.graph.node[node]['soln_dist'] = soln_dist
+            self.graph.node[node]['optimal_neighbor'] = graph.node[node]['soln_path'][1]
 
 
-            graph.node[n]['soln_path'] = soln_paths[min_dist_f_state]
-            graph.node[n]['soln_dist'] = soln_dist
-            graph.node[n]['optimal_neighbor'] = G.node[n]['soln_path'][1]
-
-
-            if soln_dist in self._distance_partition:
-                self._distance_partition[soln_dist].append(n)
+            if soln_dist in self._distance_partition['nodes']:
+                self._distance_partition['nodes'][soln_dist].append(node)
             else:
-                self._distance_partition[soln_dist] = [n]
+                self._distance_partition[soln_dist] = [node]
 
-        self._distance_partition[0] = final_states
+        self._distance_partition[0] = final_nodes
+        for f_node in final_nodes:
+            self.graph.node[f_node]['soln_path'] = [f_node]
+            self.graph.node[f_node]['soln_dist'] = 0
+            self.graph.node[f_node]['optimal_neighbor'] = f_node
 
         return self._distance_partition
 
@@ -224,7 +304,7 @@ class Component(Object):
         height = 500
         center_x = width / 2
         center_y = height / 2
-        radius = 200
+        r = radius = 200
 
         # organize neighbors by direction for particular drawing outcome
         nbrs = {'left':[], 'right':[], 'up':[], 'down':[]}
@@ -263,9 +343,9 @@ class Component(Object):
         for node in nbr_pos:
             [x_pos, y_pos] = nbr_pos[node]
             svg = svg + '<line x1="%d" y1="%d" x2="%d" y2="%d" style="stroke:black"/>'%(center_x, center_y, x_pos, y_pos)
-            svg = svg + '<g transform=" translate(%d,%d) scale(%f)">'%(x-x_offset, y-y_offset, scale) + self.graph.node[node]['stateObj'].svg + '</g>'
+            #svg = svg + '<g transform=" translate(%d,%d) scale(%f)">'%(x-x_offset, y-y_offset, scale) + self.graph.node[node]['stateObj'].svg + '</g>'
 
-        svg = svg + '<g transform=" translate(%d,%d) scale(%f)">'%(cx-x_offset, cy-y_offset, scale) + self.graph.node[center]['stateObj'].svg + '</g>'
+        #svg = svg + '<g transform=" translate(%d,%d) scale(%f)">'%(cx-x_offset, cy-y_offset, scale) + self.graph.node[center]['stateObj'].svg + '</g>'
         svg = svg + '</svg>'
 
         return svg
