@@ -1,0 +1,18 @@
+
+
+Start with the combinatorial class: 2 cars, 2 trucks: Class ID 2**2*3**2 = 36
+
+
+* Generate all states for the combinatorial class
+* Save states to database
+* Generate all connected components from those states
+* Save connnected components to database
+* For each connected component, generate its distance partition
+* Update States/Components with distance partition information
+
+* visualize combinatorial class
+* visualize a component
+    * Highlight a node and light up solution path
+* visualize a neighborhood
+* zoom in out and out through different scales
+
