@@ -204,16 +204,33 @@ def svg_neighborhood(v,red_col):
     
     
     # define lower and upper bounds for 4 regions of unit circle    
-    a = [-45+10,45+10,135+10,225+10]
-    b = [45-10,135-10,225-10,-45-10]
+    
     counts = [len(right_nbrs), len(up_nbrs),len(left_nbrs),len(down_nbrs)]
+    a_b_centers = [0,90,180,270]
+    a = [None,None,None,None]
+    b = [None,None,None,None]
+
+    for i in range(4):
+        n = counts[i]
+        if n == 0:
+            break
+
+        delta = 70.0/n
+        if 0 == n%2:
+            a[i] = a_b_centers[i] - delta*(n/2) + delta/2
+            b[i] = a_b_centers[i] + delta*(n/2) - delta/2
+        else:
+            a[i] = a_b_centers[i] - delta*(n-1)/2
+            b[i] = a_b_centers[i] + delta*(n-1)/2
+           
+    
     nbrs_x = [ [], [], [], [] ]
     nbrs_y = [ [], [], [], [] ]
 
     for i in range(4):
         n = counts[i]
         if n > 0:
-            rads =  [(math.pi/180)*(a[i]+((b[i]-a[i])/(n))*i)  for i in range(n)]
+            rads =  [(math.pi/180)*(a[i]+(70.0/n)*i)  for i in range(n)]
             nbrs_x[i] = [ cy + r*math.cos(rad) for rad in rads]
             nbrs_y[i] = [ cy + r*math.sin(rad) for rad in rads]
            
