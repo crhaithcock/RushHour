@@ -1,6 +1,5 @@
 
 import copy
-
 import collections
 import functools
 
@@ -224,7 +223,7 @@ class State:
            piece.topology not in [self.HORIZONTAL_CAR, self.HORIZONTAL_TRUCK]:
             return False
         return self.board[piece.end_b + 1] == self.BLANK_SPACE
-if piece.end_b % 6 == 5 or\
+        if piece.end_b % 6 == 5 or\
            piece.topology not in [self.HORIZONTAL_CAR, self.HORIZONTAL_TRUCK]:
             return False
         return self.board[piece.end_b + 1] == self.BLANK_SPACE
@@ -396,7 +395,7 @@ if piece.end_b % 6 == 5 or\
     def sort_pieces_combintorially(self):
         self.pieces = sorted(self.pieces, key=lambda p: p.end_a)
 
-
+    @property
     def degree(self):
         deg = 0
         for p in self.pieces:
@@ -411,9 +410,8 @@ if piece.end_b % 6 == 5 or\
 
         return deg
 
-            
-        
 
+    @property
     def topo_class_1(self):
         """
             Topological Class 1 defined by the number of vertical cars, number of vertcial trucks,
@@ -424,14 +422,24 @@ if piece.end_b % 6 == 5 or\
                      1 horizontal truck. 
         """
 
-        v_cars = len([p for p in self.pieces if p.topology == self.VERTICAL_CAR]))
-        v_trucks = len(sorted([p for p in self.pieces if p.topology == self.VERTICAL_TRUCK])
-        h_cars = len(sorted([p for p in self.pieces if p.topology == self.HORIZONTAL_CAR])
-        h_trucks = len(sorted([p for p in self.pieces if p.topology == self.HORIZONTAL_TRUCK])
+        v_cars = len([p for p in self.pieces if p.topology == self.VERTICAL_CAR])
+        v_trucks = len(sorted([p for p in self.pieces if p.topology == self.VERTICAL_TRUCK]))
+        h_cars = len(sorted([p for p in self.pieces if p.topology == self.HORIZONTAL_CAR]))
+        h_trucks = len(sorted([p for p in self.pieces if p.topology == self.HORIZONTAL_TRUCK]))
 
         return "{!s}vc_{!s}vt_{!s}hc_{!s}ht".format(v_cars, v_trucks,h_cars,h_trucks)
-        
+
     
+    def piece_length(self,piece):
+        if piece.topology in [constants.VERTICAL_CAR,constants.HORIZONTAL_CAR]:
+            return 2
+        else:
+            return 3
+    
+
+
+
+    @property
     def topo_class_2(self):
         """
             Topological Class 2 is a refinement of Topological Class 1.
@@ -443,26 +451,31 @@ if piece.end_b % 6 == 5 or\
                 * empty
                 * one car
                 * two cars
-                * one car & one truck
+                * one car followed by one truck
+                * one truck followed by one car
                 * two trucks
 
         """
 
-        vertical = [ p for p in self.pieces if p.topology in [self.VERICAl_CAR, self.VERTICAL_TRUCK]]
+        vertical = [ p for p in self.pieces if p.topology in [self.VERTICAL_CAR, self.VERTICAL_TRUCK]]
         
         horizontal = [p for p in self.pieces if p.topology in [self.HORIZONTAL_CAR,self.HORIZONTAL_TRUCK]]
     
 
         #rows[1] = [p for p in horizontal if p.end_a >= 0 and p.end_a < 6]
         #rows[2] = [p for p in horizontal if p.end_a >= 6 and p.end_a < 12 ]
-        rows = [ [p.length for p in horizontal if p.end_a >= 6(i-1) and p.end_a < 6i] for i in range(6) ]
+        rows = [ [self.piece_length(p) for p in horizontal if p.end_a >= 6*(i-1) and p.end_a < 6*i] for i in range(6) ]
 
-        cols = [ [p.length for p in vertical if mod(p.end_a) == i] for i in range(6))
+        cols = [ [self.piece_length(p) for p in vertical if p.end_a % 6 == i] for i in range(6)]
 
-        col_hash = ''
+        # !!TODO - UGH. Fix this monstrosity of a for loop. Use dictionary keyed to tuples ( (),(2), (2,2,2), ...)
+        #           the replace the giant list of if statements with one dict lookup
+        #           then replace for loop with map/comprehension list-based approach
+        
+         col_hash = ''
         row_hash = ''
         for i in range(6):
-            row = rosw[i]
+            row = rows[i]
             col = cols[i]
 
             if row == []:
@@ -499,7 +512,7 @@ if piece.end_b % 6 == 5 or\
             if col == [3,2]:
                 col_hash = col_hash + constants.ONE_TRUCK_ONE_CAR
 
-                                
+            return int(row_hash + col_hash,2)
 
     @property
     def combinatorial_class(self):

@@ -47,7 +47,7 @@ create table component(
 );
 
 
-create table comp_stats(
+create table component_stats(
 	component_id		int,
 	num_states			int,
 	num_soln_states		int,
@@ -58,7 +58,7 @@ create table comp_stats(
 );
 
 
-create table comp_edges(
+create table component_edges(
 	component_id			int,
 	source_node_id			int,
 	target_node_id			int,
@@ -66,7 +66,7 @@ create table comp_edges(
 );
 
 
-create table comp_dist_partition(
+create table distance_partition(
 	comp_id				int,
 	soln_dist			int,
 	node_id				int
@@ -86,7 +86,7 @@ create table comp_dist_partition(
 
 
 
-create table topology(
+create table topology_stats(
 	comb_class_id				int,
 	topology_1					text,
 	toplogy_2					text,

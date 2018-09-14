@@ -6,6 +6,7 @@
 
 import sqlite3
 import collections
+from collections import defaultdict
 
 import state
 import constants
@@ -131,14 +132,14 @@ def generate_states(num_cars, num_trucks):
     """ Generate all possible states for the input combinatorial class."""
     global db_conn
 
-    open_db(num_cars,num_trucks)
+    #open_db(num_cars,num_trucks)
 
     comb_class = 2**num_cars*3**num_trucks
     red_car_positions = range(12, 17)
 
-    sql = "insert into combinatorial_class (id,num_cars,num_trucks)values({!s},{!s},{!s})"\
-           .format(comb_class,num_cars,num_trucks)
-    db_conn.commit()
+    #sql = "insert into combinatorial_class (id,num_cars,num_trucks)values({!s},{!s},{!s})"\
+    #       .format(comb_class,num_cars,num_trucks)
+    #db_conn.commit()
 
 
     for red_car_end_a in red_car_positions:
@@ -150,9 +151,9 @@ def generate_states(num_cars, num_trucks):
         place_remaining_pieces(0, num_cars-1, num_trucks, red_car_end_a, comb_class)
         remove_piece(red_car_end_a, HORIZONTAL_CAR)
 
-    flush_data(comb_class)
+    #flush_data(comb_class)
 
-    close_db()
+    #close_db()
 
 
 
@@ -173,7 +174,10 @@ def place_remaining_pieces(cur_position, num_cars, num_trucks, red_car_end_a, co
     if num_cars == num_trucks == 0:
 
         top_hash_int, bottom_hash_int = board_to_ints()
-        record_state(red_car_end_a, top_hash_int, bottom_hash_int, comb_class)
+        save_graph_stats(state.State(red_car_end_a,top_hash_int,bottom_hash_int))
+
+
+        #record_state(red_car_end_a, top_hash_int, bottom_hash_int, comb_class)
         return
 
     if num_cars > 0:
@@ -208,10 +212,44 @@ def place_remaining_pieces(cur_position, num_cars, num_trucks, red_car_end_a, co
                 remove_piece(pos, VERTICAL_TRUCK)
 
 
+# Global Data to udpate for stats
+
+def graph_stats_factory():
+    ret = { 'num_states':0, \
+            'num_soln_states':0, \
+            'num_isolated_states':0, \
+            'deg_sum':0, \
+            'deg_hist': defaultdict(int) \
+          }
+    return ret
+
+
+graph_stats = defaultdict(graph_stats_factory)
+
+def save_graph_stats(state):
+    comb_class = state.combinatorial_class
+    topo_1 = state.topo_class_1
+    topo_2 = state.topo_class_2
+    deg = state.degree
+
+    stats = graph_stats[(comb_class,topo_1,topo_2)]
+
+    stats['num_states'] = stats['num_states'] + 1
+    stats['deg_hist'][deg] = stats['deg_hist'][deg] + 1
+    stats['deg_sum'] = stats['deg_sum'] + deg
+    if deg == 0:
+        stats['num_isolated_states'] = stats['num_isolated_states'] + 1
+
+    if state.is_final_state:
+        stats['num_soln_states'] =  stats['num_soln_states'] + 1
+
+    #graph_stats[(comb_class,topo_1,topo_2)] = stats
 
 
 
-comb_class_
+    
+
+
 
 def record_state(red_car_end_a=None, top_hash_int=None,\
                  bottom_hash_int=None, comb_class=None):
