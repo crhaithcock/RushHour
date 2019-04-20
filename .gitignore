@@ -60,5 +60,6 @@ RushHourPy/database/*.db
 
 .idea/*.xml
 
-RushHourPy/data/*.db
+# Database Files
+*.db
 
